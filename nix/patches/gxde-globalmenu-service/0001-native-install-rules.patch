@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -68,5 +68,6 @@
+         KF5::CoreAddons
+         )
+ 
+-include(deb.cmake)
+-include(CPack)
++include(GNUInstallDirs)
++install(TARGETS ${PROJECT} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
++install(FILES gxde-globalmenu-service.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

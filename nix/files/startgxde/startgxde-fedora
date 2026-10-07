@@ -1,0 +1,15 @@
+#!/bin/bash
+export XDG_CURRENT_DESKTOP=GXDE
+export XDG_SESSION_DESKTOP=gxde
+export DESKTOP_SESSION=gxde
+if [[ -z ${DBUS_SESSION_BUS_ADDRESS:-} ]]; then
+    exec dbus-run-session -- "$0" "$@"
+fi
+if [[ -r /etc/profile.d/gxde.sh ]]; then
+    . /etc/profile.d/gxde.sh
+fi
+set -- /usr/bin/startdde "$@"
+. /usr/share/startdde/00deepin-dde-env
+# Import only the variables needed by activated graphical services.
+dbus-update-activation-environment --systemd DISPLAY XAUTHORITY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE QT_QPA_PLATFORM QT_QPA_PLATFORMTHEME XDG_CONFIG_DIRS GTK2_RC_FILES
+exec "$@"

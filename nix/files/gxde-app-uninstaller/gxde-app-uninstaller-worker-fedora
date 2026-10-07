@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+set -eu
+
+[ "$(id -u)" -eq 0 ] || { echo "This worker must run as root." >&2; exit 1; }
+[ "$#" -eq 2 ] || { echo "Usage: $0 file|package-name VALUE" >&2; exit 2; }
+
+case "$1" in
+    package-name)
+        package=$2
+        [[ "$package" =~ ^[A-Za-z0-9][A-Za-z0-9+._:-]*$ ]] || {
+            echo "Invalid package name: $package" >&2; exit 2;
+        }
+        ;;
+    file|desktop-file)
+        desktop_file=$(realpath -e -- "$2") || exit 1
+        [[ "$desktop_file" == *.desktop ]] || { echo "Not a desktop file." >&2; exit 2; }
+        package=$(rpm -qf --qf '%{NAME}\n' -- "$desktop_file" 2>/dev/null | head -n1)
+        [ -n "$package" ] || { echo "No installed RPM owns $desktop_file" >&2; exit 1; }
+        ;;
+    *) echo "Unknown mode: $1" >&2; exit 2 ;;
+esac
+
+exec dnf remove -y "$package"

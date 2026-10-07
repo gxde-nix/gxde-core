@@ -1,0 +1,33 @@
+--- a/frame/CMakeLists.txt
++++ b/frame/CMakeLists.txt
+@@ -10,6 +10,7 @@ configure_file(environments.h.in environments.h @ONLY)
+ # Find the library
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent DBus Gui)
++find_package(Qt6GuiPrivate REQUIRED)
+ find_package(LayerShellQt REQUIRED)
+ 
+ pkg_check_modules(dtk2widget REQUIRED dtk2widget)
+--- a/plugins/tray/CMakeLists.txt
++++ b/plugins/tray/CMakeLists.txt
+@@ -23,6 +23,7 @@ set(INTERFACES
+ 
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt6 REQUIRED COMPONENTS Widgets Svg DBus Gui)
++find_package(Qt6GuiPrivate REQUIRED)
+ pkg_check_modules(dtk2widget REQUIRED dtk2widget)
+ find_package(DFrameworkdbusQt6 REQUIRED)
+ 
+--- a/translate_generation.sh
++++ b/translate_generation.sh
+@@ -2,8 +2,8 @@
+ # this file is used to auto-generate .qm file from .ts file.
+ # author: shibowen at linuxdeepin.com
+ 
+-LUPDATE=/usr/lib/qt6/bin/lupdate
+-LRELEASE=/usr/lib/qt6/bin/lrelease
++LUPDATE=/usr/lib64/qt6/bin/lupdate
++LRELEASE=/usr/lib64/qt6/bin/lrelease
+ 
+ $LUPDATE -recursive . -ts translations/gxde-dock_*.ts
+ ts_list=(`ls translations/*.ts`)

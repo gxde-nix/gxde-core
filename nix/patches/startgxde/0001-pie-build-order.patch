@@ -1,0 +1,24 @@
+--- a/Makefile
++++ b/Makefile
+@@ -1,7 +1,7 @@
+ PREFIX = /usr
+ GOPATH_DIR = gopath
+ GOPKG_PREFIX = pkg.deepin.io/dde/startdde
+-GOBUILD = go build -v
++GOBUILD = go build -v -buildmode=pie
+ GOPATH="/usr/share/gocode-gxde/:/usr/share/gocode/:${CURDIR}/${GOPATH_DIR}"
+ all: build
+ 
+@@ -20,10 +20,10 @@
+ 	# check validity
+ 	jq . misc/config/auto_launch.json >/dev/null
+ 
+-startdde:
++startdde: | prepare
+ 	env GOPATH="${CURDIR}/${GOPATH_DIR}:${GOPATH}" ${GOBUILD} -o startdde
+ 
+-fix-xauthority-perm:
++fix-xauthority-perm: | prepare
+ 	env GOPATH="${CURDIR}/${GOPATH_DIR}:${GOPATH}" ${GOBUILD} -o fix-xauthority-perm ${GOPKG_PREFIX}/cmd/fix-xauthority-perm
+ 
+ build: prepare startdde auto_launch_json fix-xauthority-perm

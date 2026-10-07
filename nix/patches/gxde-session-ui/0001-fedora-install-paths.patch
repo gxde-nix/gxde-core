@@ -1,0 +1,175 @@
+--- a/translate_generation.sh
++++ b/translate_generation.sh
+@@ -7,4 +7,4 @@ for ts in "${ts_list[@]}"
+ do
+     printf "\nprocess ${ts}\n"
+-    lrelease "${ts}"
++    /usr/lib64/qt5/bin/lrelease "${ts}"
+ done
+--- a/translate_desktop.sh
++++ b/translate_desktop.sh
+@@ -4,4 +4,8 @@ DESKTOP_SOURCE_FILE=misc/applications/deepin-toggle-desktop.desktop.in
+ DESKTOP_DEST_FILE=misc/applications/deepin-toggle-desktop.desktop
+ DESKTOP_TS_DIR=translations/toggle-desktop/
+ 
+-/usr/bin/deepin-desktop-ts-convert ts2desktop $DESKTOP_SOURCE_FILE $DESKTOP_TS_DIR $DESKTOP_DEST_FILE
++if command -v deepin-desktop-ts-convert >/dev/null 2>&1; then
++    deepin-desktop-ts-convert ts2desktop "$DESKTOP_SOURCE_FILE" "$DESKTOP_TS_DIR" "$DESKTOP_DEST_FILE"
++else
++    install -pm0644 "$DESKTOP_SOURCE_FILE" "$DESKTOP_DEST_FILE"
++fi
+--- a/lightdm-deepin-greeter/CMakeLists.txt
++++ b/lightdm-deepin-greeter/CMakeLists.txt
+@@ -45,7 +45,7 @@ install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/deepin-greeter
+ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts/
+     DESTINATION /etc/deepin/greeters.d
+     FILES_MATCHING PATTERN "*"
+ )
+ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/accounts-daemon.service.d/override.conf
+-    DESTINATION /etc/systemd/system/accounts-daemon.service.d
++    DESTINATION ${PREFIX}/lib/systemd/system/accounts-daemon.service.d
+ )
+--- a/libdde-auth/CMakeLists.txt
++++ b/libdde-auth/CMakeLists.txt
+@@ -3,5 +3,5 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus)
+ find_package(Dtk REQUIRED COMPONENTS Core)
+ 
+-find_program(QDBUSXML2CPP qdbusxml2cpp)
++find_program(QDBUSXML2CPP NAMES qdbusxml2cpp HINTS /usr/lib64/qt5/bin REQUIRED)
+ 
+ pkg_check_modules(DAUTH REQUIRED dframeworkdbus)
+--- a/session-widgets/CMakeLists.txt
++++ b/session-widgets/CMakeLists.txt
+@@ -1,9 +1,12 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus Xml X11Extras Svg)
+-find_package(Dtk REQUIRED COMPONENTS Widget Core)
++find_package(Dtk REQUIRED COMPONENTS Core)
++find_package(Dtk2Qt5Widget REQUIRED)
++set(DtkWidget_LIBRARIES ${Dtk2Qt5Widget_LIBRARIES})
++set(DtkWidget_INCLUDE_DIRS ${DTK2QT5WIDGET_INCLUDE_DIR})
+ 
+-pkg_check_modules(SW REQUIRED dframeworkdbus dtkwidget dtkcore liblightdm-qt5-3 x11 xi xtst dframeworkdbus gsettings-qt)
++pkg_check_modules(SW REQUIRED dframeworkdbus dtk2widget-qt5 dtkcore liblightdm-qt5-3 x11 xi xtst dframeworkdbus gsettings-qt)
+ 
+-find_program(QDBUSXML2CPP qdbusxml2cpp)
++find_program(QDBUSXML2CPP NAMES qdbusxml2cpp HINTS /usr/lib64/qt5/bin REQUIRED)
+ 
+ set(AUTH_DBUS_XML_DIR ${CMAKE_SOURCE_DIR}/libdde-auth/dbus)
+--- a/dde-lock/CMakeLists.txt
++++ b/dde-lock/CMakeLists.txt
+@@ -1,6 +1,9 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus Xml X11Extras Svg)
+-find_package(Dtk REQUIRED COMPONENTS Widget Core)
++find_package(Dtk REQUIRED COMPONENTS Core)
++find_package(Dtk2Qt5Widget REQUIRED)
++set(DtkWidget_LIBRARIES ${Dtk2Qt5Widget_LIBRARIES})
++set(DtkWidget_INCLUDE_DIRS ${DTK2QT5WIDGET_INCLUDE_DIR})
+ 
+ pkg_check_modules(LOCK REQUIRED gsettings-qt xtst xext x11)
+ 
+--- a/lightdm-deepin-greeter/CMakeLists.txt
++++ b/lightdm-deepin-greeter/CMakeLists.txt
+@@ -1,7 +1,10 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus Xml X11Extras Svg)
+-find_package(Dtk REQUIRED COMPONENTS Widget Core)
++find_package(Dtk REQUIRED COMPONENTS Core)
++find_package(Dtk2Qt5Widget REQUIRED)
++set(DtkWidget_LIBRARIES ${Dtk2Qt5Widget_LIBRARIES})
++set(DtkWidget_INCLUDE_DIRS ${DTK2QT5WIDGET_INCLUDE_DIR})
+ 
+-pkg_check_modules(GREETER REQUIRED gsettings-qt liblightdm-qt5-3 x11 xext xfixes xcursor dtkwidget xrandr)
++pkg_check_modules(GREETER REQUIRED gsettings-qt liblightdm-qt5-3 x11 xext xfixes xcursor dtk2widget-qt5 xrandr)
+ 
+ add_executable(lightdm-deepin-greeter
+--- a/dmemory-warning-dialog/CMakeLists.txt
++++ b/dmemory-warning-dialog/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets Concurrent X11Extras DBus)
+-find_package(Dtk REQUIRED COMPONENTS Widget)
++find_package(Dtk2Qt5Widget REQUIRED)
+ 
+-pkg_check_modules(DMW REQUIRED x11 dframeworkdbus dtkwidget)
++pkg_check_modules(DMW REQUIRED x11 dframeworkdbus dtk2widget-qt5)
+ 
+ file(GLOB SRCS "src/*.h" "src/*.cpp")
+--- a/dde-license-dialog/CMakeLists.txt
++++ b/dde-license-dialog/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets)
+ 
+-pkg_check_modules(LICENSE_DIALOG REQUIRED dtkwidget)
++pkg_check_modules(LICENSE_DIALOG REQUIRED dtk2widget-qt5)
+ 
+ set(SOURCES
+     main.cpp
+--- a/dnetwork-secret-dialog/CMakeLists.txt
++++ b/dnetwork-secret-dialog/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets)
+ 
+-pkg_check_modules(NETWORK_SECRET REQUIRED dtkwidget)
++pkg_check_modules(NETWORK_SECRET REQUIRED dtk2widget-qt5)
+ 
+ add_executable(dnetwork-secret-dialog
+     main.cpp
+--- a/dde-suspend-dialog/CMakeLists.txt
++++ b/dde-suspend-dialog/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets)
+ 
+-pkg_check_modules(SUSPEND REQUIRED dtkwidget)
++pkg_check_modules(SUSPEND REQUIRED dtk2widget-qt5)
+ 
+ add_executable(dde-suspend-dialog
+     main.cpp
+--- a/dde-warning-dialog/CMakeLists.txt
++++ b/dde-warning-dialog/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus)
+ 
+-pkg_check_modules(WARNING REQUIRED dtkwidget)
++pkg_check_modules(WARNING REQUIRED dtk2widget-qt5)
+ 
+ add_executable(dde-warning-dialog
+     main.cpp
+--- a/dde-welcome/CMakeLists.txt
++++ b/dde-welcome/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus Xml X11Extras Svg)
+ 
+-pkg_check_modules(WELCOME REQUIRED dtkwidget dframeworkdbus gsettings-qt x11 xext xfixes xcursor)
++pkg_check_modules(WELCOME REQUIRED dtk2widget-qt5 dframeworkdbus gsettings-qt x11 xext xfixes xcursor)
+ 
+ add_executable(dde-welcome
+     main.cpp
+--- a/dde-wm-chooser/CMakeLists.txt
++++ b/dde-wm-chooser/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus Xml X11Extras Svg)
+ 
+-pkg_check_modules(WM_CHOOSER REQUIRED dtkwidget gsettings-qt)
++pkg_check_modules(WM_CHOOSER REQUIRED dtk2widget-qt5 gsettings-qt)
+ 
+ add_executable(dde-wm-chooser
+     main.cpp
+--- a/widgets/CMakeLists.txt
++++ b/widgets/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ find_package(PkgConfig REQUIRED)
+ find_package(Qt5 REQUIRED COMPONENTS Widgets DBus Xml X11Extras Svg)
+ 
+-pkg_check_modules(WIDGETS REQUIRED dtkwidget dframeworkdbus liblightdm-qt5-3 x11 xi xtst)
++pkg_check_modules(WIDGETS REQUIRED dtk2widget-qt5 dframeworkdbus liblightdm-qt5-3 x11 xi xtst)
+ 
+ set(WIDGETS_HEADERS
+     useravatar.h

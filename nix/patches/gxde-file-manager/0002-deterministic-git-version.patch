@@ -1,0 +1,36 @@
+--- a/gxde-desktop-panel/CMakeLists.txt
++++ b/gxde-desktop-panel/CMakeLists.txt
+@@ -247,19 +247,22 @@
+ endif()
+ 
+ # git rev → GIT_VERSION
+-find_package(Git QUIET)
+-if(GIT_FOUND)
+-    execute_process(
+-        COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+-        OUTPUT_VARIABLE GIT_VERSION
+-        OUTPUT_STRIP_TRAILING_WHITESPACE
+-        ERROR_QUIET
+-    )
+-    if(GIT_VERSION)
+-        target_compile_definitions(${TARGET_NAME} PRIVATE GIT_VERSION="${GIT_VERSION}")
++if(NOT GIT_VERSION)
++    find_package(Git QUIET)
++    if(GIT_FOUND)
++        execute_process(
++            COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
++            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
++            OUTPUT_VARIABLE GIT_VERSION
++            OUTPUT_STRIP_TRAILING_WHITESPACE
++            ERROR_QUIET
++        )
+     endif()
+ endif()
++if(NOT GIT_VERSION)
++    set(GIT_VERSION "unknown")
++endif()
++target_compile_definitions(${TARGET_NAME} PRIVATE GIT_VERSION="${GIT_VERSION}")
+ 
+ gxde_compile_translations(${TARGET_NAME} "${SRC_DIR}/translations")
+ 

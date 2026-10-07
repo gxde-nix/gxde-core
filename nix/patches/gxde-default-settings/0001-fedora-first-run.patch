@@ -1,0 +1,47 @@
+--- a/dde-first-run
++++ b/dde-first-run
+@@ -13,23 +13,32 @@
+ import subprocess
+ 
+ def querySystemType():
+-    f = open("/etc/deepin-version", "r")
+-    content = f.read()
++    with open("/usr/lib/deepin/desktop-version", "r") as f:
++        content = f.read()
+ 
+     r = re.search(r"^Type=(.*)$", content, re.M)
+ 
+     return r.group(1)
+ 
+ if __name__ == "__main__":
+-    lang, charset = locale.getdefaultlocale()
++    state_dir = path.join(os.environ.get("XDG_STATE_HOME", path.expanduser("~/.local/state")), "gxde")
++    marker = path.join(state_dir, "first-run-complete")
++    if path.exists(marker):
++        raise SystemExit(0)
++    os.makedirs(state_dir, exist_ok=True)
+     sys_type = querySystemType()
+ 
+-    subprocess.Popen("/usr/bin/gxde-introduction")
++    if path.isfile("/usr/bin/gxde-introduction"):
++        subprocess.Popen(["/usr/bin/gxde-introduction"])
+ 
+     # create symlink for introduction video
+     introduction_video_path = "/usr/share/gxde-introduction/demo.mp4"
+     if path.exists(introduction_video_path):
+-        os.symlink(introduction_video_path, path.expanduser('~/Videos/gxde-introduction.mp4'))
++        videos = subprocess.check_output(["xdg-user-dir", "VIDEOS"], text=True).strip()
++        os.makedirs(videos, exist_ok=True)
++        link = path.join(videos, 'gxde-introduction.mp4')
++        if not path.lexists(link):
++            os.symlink(introduction_video_path, link)
+ 
+     if sys_type != "Desktop":
+         desktops = ['dde-computer.desktop', 'dde-trash.desktop']
+@@ -43,3 +52,6 @@
+ 
+     if path.exists(path.expanduser('~/.config/autostart/dde-first-run.desktop')):
+         remove(path.expanduser('~/.config/autostart/dde-first-run.desktop'))
++
++    with open(marker, "w") as stream:
++        stream.write("complete\n")

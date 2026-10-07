@@ -1,0 +1,31 @@
+--- a/webview/webview.pro
++++ b/webview/webview.pro
+@@ -19,6 +19,6 @@ SOURCES += \
+     main.cpp \
+     dfmwebview.cpp
+ 
+-target.path = /usr/lib/$${QMAKE_HOST.arch}-linux-gnu/gxde-file-manager/plugins/views
++target.path = $${LIB_INSTALL_DIR}/gxde-file-manager/plugins/views
+ 
+ INSTALLS += target
+--- a/clipboard-files/clipboard-files.pro
++++ b/clipboard-files/clipboard-files.pro
+@@ -9,7 +9,7 @@ DESTDIR = $$_PRO_FILE_PWD_/../controllers
+ 
+ OTHER_FILES += clipboard-files.json
+ 
+-target.path = /usr/lib/$${QMAKE_HOST.arch}-linux-gnu/gxde-file-manager/plugins/controllers
++target.path = $${LIB_INSTALL_DIR}/gxde-file-manager/plugins/controllers
+ 
+ INSTALLS += target
+ 
+--- a/nutstore-dfm-plugin/nutstore-dfm-plugin.pro
++++ b/nutstore-dfm-plugin/nutstore-dfm-plugin.pro
+@@ -19,6 +19,6 @@ HEADERS += \
+ 
+ DISTFILES += generic.json
+ 
+-target.path = /usr/lib/$${QMAKE_HOST.arch}-linux-gnu/gxde-file-manager/plugins/generics
++target.path = $${LIB_INSTALL_DIR}/gxde-file-manager/plugins/generics
+ 
+ INSTALLS += target

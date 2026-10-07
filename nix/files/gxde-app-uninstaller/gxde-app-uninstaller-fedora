@@ -1,0 +1,60 @@
+#!/usr/bin/bash
+set -uo pipefail
+
+if [ -r /opt/bashimport/transhell.sh ]; then
+    source /opt/bashimport/transhell.sh
+    load_transhell_debug
+fi
+: "${TRANSHELL_CONTENT_GOING_TO_UNINSTALL:=Going to uninstall}"
+: "${TRANSHELL_CONTENT_UNINSTALL_USER_CONFIRM_TEXT:=Do you want to continue?}"
+: "${TRANSHELL_CONTENT_UNINSTALLING:=Uninstalling}"
+: "${TRANSHELL_CONTENT_UNINSTALL_FAILED:=Uninstall failed}"
+
+dialog() {
+    if command -v garma >/dev/null 2>&1; then garma "$@"; else zenity "$@"; fi
+}
+
+if [ "$#" -ne 2 ]; then
+    echo "Usage: gxde-app-uninstaller desktop-name|file|package-name VALUE" >&2
+    exit 2
+fi
+
+mode=$1
+value=$2
+case "$mode" in
+    package-name) display_name=$value ;;
+    file)
+        desktop_file=$(realpath -e -- "$value") || exit 1
+        [[ "$desktop_file" == *.desktop ]] || exit 2
+        display_name=$(sed -n 's/^Name=//p' "$desktop_file" | head -n1)
+        value=$desktop_file
+        ;;
+    desktop-name)
+        file_name=$(basename -- "$value" .desktop).desktop
+        desktop_file=
+        old_ifs=$IFS; IFS=:
+        for data_dir in ${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:"${HOME}/.local/share"; do
+            if [ -f "$data_dir/applications/$file_name" ]; then
+                desktop_file="$data_dir/applications/$file_name"
+                break
+            fi
+        done
+        IFS=$old_ifs
+        [ -n "$desktop_file" ] || { dialog --error --text="Desktop file not found: $file_name"; exit 1; }
+        display_name=$(sed -n 's/^Name=//p' "$desktop_file" | head -n1)
+        mode=file
+        value=$desktop_file
+        ;;
+    *) echo "Unknown mode: $mode" >&2; exit 2 ;;
+esac
+
+: "${display_name:=$value}"
+if dialog --question --text="${TRANSHELL_CONTENT_GOING_TO_UNINSTALL} ${display_name}.\n${TRANSHELL_CONTENT_UNINSTALL_USER_CONFIRM_TEXT}"; then
+    if pkexec /usr/libexec/gxde-app-uninstaller/gxde-app-uninstaller-worker "$mode" "$value" 2>&1 \
+        | dialog --progress --text="${TRANSHELL_CONTENT_UNINSTALLING}" --pulsate --auto-close --no-cancel; then
+        notify-send -i package-x-generic "GXDE App Uninstaller" "$display_name"
+    else
+        dialog --error --text="$display_name ${TRANSHELL_CONTENT_UNINSTALL_FAILED}"
+        exit 1
+    fi
+fi

@@ -1,0 +1,41 @@
+#!/usr/bin/bash
+set -u
+
+here=/usr/libexec/gxde-app-installer
+if [ -r /opt/bashimport/transhell.sh ]; then
+    source /opt/bashimport/transhell.sh
+    load_transhell_debug
+fi
+: "${TRANSHELL_CONTENT_PREPAREING_INSTALL:=Preparing to install}"
+: "${TRANSHELL_CONTENT_PLEASE_CONFIRM_INSTALL:=Please confirm the installation.}"
+: "${TRANSHELL_CONTENT_INSTALL_LOG:=Installation log}"
+
+dialog() {
+    if command -v garma >/dev/null 2>&1; then
+        garma "$@"
+    else
+        zenity "$@"
+    fi
+}
+
+if [ "$(id -u)" -ne 0 ]; then
+    exec pkexec env DISPLAY="${DISPLAY:-}" WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
+        XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" "$here/gxde-app-installer" "$@"
+fi
+
+if [ "$#" -eq 0 ]; then
+    echo "Usage: gxde-app-installer PACKAGE_OR_RPM [...]" >&2
+    exit 2
+fi
+
+for app in "$@"; do
+    case "$app" in
+        -*|'') echo "Invalid package argument: $app" >&2; continue ;;
+    esac
+    if dialog --question --width=360 --height=160 \
+        --text="${TRANSHELL_CONTENT_PREPAREING_INSTALL} ${app}\n\n${TRANSHELL_CONTENT_PLEASE_CONFIRM_INSTALL}"; then
+        dnf install -y --refresh "$app" 2>&1 | dialog --text-info --width=640 \
+            --height=420 --title="${TRANSHELL_CONTENT_INSTALL_LOG}" --auto-scroll
+        test "${PIPESTATUS[0]}" -eq 0
+    fi
+done

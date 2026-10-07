@@ -1,0 +1,55 @@
+#!/usr/bin/bash
+set -uo pipefail
+
+worker=/usr/libexec/gxde-app-upgrader/gxde-do-upgrade-worker.sh
+if [ -r /opt/bashimport/transhell.sh ]; then
+    source /opt/bashimport/transhell.sh
+    load_transhell_debug
+fi
+: "${TRANSHELL_CONTENT_UPDATE_CHEKING_PLEASE_WAIT:=Checking for updates}"
+: "${TRANSHELL_CONTENT_NO_NEED_TO_UPGRADE:=No updates are available.}"
+: "${TRANSHELL_CONTENT_CHOOSE_APP_TO_UPGRADE:=Choose packages to update}"
+: "${TRANSHELL_CONTENT_NO_APP_IS_CHOSEN:=No package was selected.}"
+: "${TRANSHELL_CONTENT_UPGRADING_PLEASE_WAIT:=Installing updates}"
+: "${TRANSHELL_CONTENT_CHOSEN_APP_UPGRADE_FINISHED:=The selected packages were updated.}"
+
+dialog() {
+    if command -v garma >/dev/null 2>&1; then garma "$@"; else zenity "$@"; fi
+}
+
+pkexec "$worker" update 2>&1 | dialog --progress --auto-close --pulsate \
+    --no-cancel --text="${TRANSHELL_CONTENT_UPDATE_CHEKING_PLEASE_WAIT}" || {
+        dialog --error --text="Update metadata refresh failed."
+        exit 1
+    }
+
+package_list=$($worker upgradable-list)
+if [ -z "$package_list" ]; then
+    dialog --info --text="${TRANSHELL_CONTENT_NO_NEED_TO_UPGRADE}"
+    exit 0
+fi
+
+rows=$(
+    while read -r package new_version current_version; do
+        printf 'TRUE\n%s\n%s\n%s\n' "$package" "$new_version" "$current_version"
+    done <<< "$package_list"
+)
+
+selected=$(printf '%s\n' "$rows" | dialog --list \
+    --text="${TRANSHELL_CONTENT_CHOOSE_APP_TO_UPGRADE}" \
+    --column="Update" --column="Package" --column="New version" --column="Current version" \
+    --checklist --multiple --print-column=2 --separator=' ' --height=420 --width=720) || exit 0
+
+if [ -z "$selected" ]; then
+    dialog --info --text="${TRANSHELL_CONTENT_NO_APP_IS_CHOSEN}"
+    exit 0
+fi
+
+read -r -a packages <<< "$selected"
+if pkexec "$worker" upgrade-app "${packages[@]}" | dialog --progress --auto-close \
+    --no-cancel --text="${TRANSHELL_CONTENT_UPGRADING_PLEASE_WAIT}"; then
+    dialog --info --text="${TRANSHELL_CONTENT_CHOSEN_APP_UPGRADE_FINISHED}"
+else
+    dialog --error --text="Package upgrade failed."
+    exit 1
+fi

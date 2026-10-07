@@ -1,0 +1,90 @@
+--- a/Makefile
++++ b/Makefile
+@@ -2,7 +2,7 @@
+ PREFIX = /usr
+ GOPATH_DIR = gopath
+ GOPKG_PREFIX = pkg.deepin.io/dde/daemon
+-GOBUILD = go build
++GOBUILD = go build -buildmode=pie
+ GOPATH="/usr/share/gocode-gxde/:/usr/share/gocode/:${CURDIR}/${GOPATH_DIR}"
+ BINARIES =  \
+ 	    dde-session-daemon \
+@@ -59,7 +59,7 @@
+ 	deepin-policy-ts-convert ts2policy misc/polkit-action/com.deepin.daemon.Grub2.policy.in misc/ts/com.deepin.daemon.Grub2.policy misc/polkit-action/com.deepin.daemon.Grub2.policy
+ 	deepin-policy-ts-convert ts2policy misc/polkit-action/com.deepin.daemon.accounts.policy.in misc/ts/com.deepin.daemon.accounts.policy misc/polkit-action/com.deepin.daemon.accounts.policy
+ 
+-build: prepare out/bin/default-terminal out/bin/default-file-manager out/bin/desktop-toggle out/pam_deepin_auth.so $(addprefix out/bin/, ${BINARIES}) ts_to_policy
++build: prepare out/bin/default-terminal out/bin/default-file-manager out/bin/desktop-toggle out/pam_deepin_auth.so $(addprefix out/bin/, ${BINARIES})
+ 
+ test: prepare
+ 	env GOPATH="${GOPATH}:${CURDIR}/${GOPATH_DIR}" go test -v ./...
+@@ -93,8 +93,8 @@
+ 	mkdir -pv ${DESTDIR}/var/cache/appearance
+ 	cp -r misc/thumbnail ${DESTDIR}/var/cache/appearance/
+ 
+-	mkdir -pv ${DESTDIR}/lib/systemd/system/
+-	cp -f misc/systemd/services/* ${DESTDIR}/lib/systemd/system/
++	mkdir -pv ${DESTDIR}/usr/lib/systemd/system/
++	cp -f misc/systemd/services/* ${DESTDIR}/usr/lib/systemd/system/
+ 
+ 	mkdir -pv ${DESTDIR}/etc/pam.d/
+ 	cp -f misc/etc/pam.d/* ${DESTDIR}/etc/pam.d/
+--- a/accounts/users/manager.go
++++ b/accounts/users/manager.go
+@@ -31,7 +31,7 @@
+ 	userCmdModify = "usermod"
+ 	userCmdGroup  = "gpasswd"
+ 
+-	defaultConfigShell = "/etc/adduser.conf"
++	defaultConfigShell = "/etc/default/useradd"
+ )
+ 
+ func CreateUser(username, fullname, shell string) error {
+@@ -101,7 +101,7 @@
+ 	return doAction(userCmdModify, []string{arg, username})
+ }
+ 
+-// Default config: /etc/adduser.conf
++// Default config: /etc/default/useradd
+ func getDefaultShell(config string) (string, error) {
+ 	fp, err := os.Open(config)
+ 	if err != nil {
+@@ -111,7 +111,7 @@
+ 
+ 	var (
+ 		shell   string
+-		match   = regexp.MustCompile(`^DSHELL=(.*)`)
++		match   = regexp.MustCompile(`^SHELL=(.*)`)
+ 		scanner = bufio.NewScanner(fp)
+ 	)
+ 
+--- a/bin/dde-lockservice/manager.go
++++ b/bin/dde-lockservice/manager.go
+@@ -203,7 +203,7 @@
+ }
+ 
+ func (m *Manager) doAuthenticate(username, password string, pid uint32) {
+-	handler, err := pam.StartFunc("lightdm", username, func(style pam.Style, msg string) (string, error) {
++	handler, err := pam.StartFunc("gxde-lock", username, func(style pam.Style, msg string) (string, error) {
+ 		switch style {
+ 		// case pam.PromptEchoOn:
+ 		// 	if msg != "" {
+--- a/grub2/modify_manger.go
++++ b/grub2/modify_manger.go
+@@ -29,7 +29,7 @@
+ )
+ 
+ const (
+-	grubMkconfigCmd = "grub-mkconfig"
++	grubMkconfigCmd = "grub2-mkconfig"
+ 	adjustThemeCmd  = "/usr/lib/deepin-api/adjust-grub-theme"
+ )
+ 
+--- a/misc/etc/pam.d/deepin-auth-keyboard
++++ b/misc/etc/pam.d/deepin-auth-keyboard
+@@ -1,4 +1 @@
+-auth	[success=2 default=ignore]	pam_lsass.so
+-auth	[success=1 default=ignore]	pam_unix.so nullok_secure try_first_pass
+-auth	requisite	pam_deny.so
+-auth	required	pam_permit.so
++auth include system-auth

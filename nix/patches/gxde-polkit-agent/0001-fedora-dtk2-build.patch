@@ -1,0 +1,14 @@
+--- a/dde-polkit-agent.pro
++++ b/dde-polkit-agent.pro
+@@ -2,9 +2,9 @@
+ TEMPLATE = app
+ QT = core gui widgets dbus
+ CONFIG += link_pkgconfig c++11
+-PKGCONFIG += dtkcore dtkwidget polkit-qt5-1 dframeworkdbus
++PKGCONFIG += dtkcore dtk2widget-qt5 polkit-qt5-1 dframeworkdbus
+ 
+-load(dtk_qmake)
++
+ 
+ DBUS_ADAPTORS += com.deepin.Polkit1AuthAgent.xml
+ 

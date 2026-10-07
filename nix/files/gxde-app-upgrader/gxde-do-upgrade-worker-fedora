@@ -1,0 +1,58 @@
+#!/usr/bin/bash
+set -uo pipefail
+
+status_dir=${XDG_RUNTIME_DIR:-/tmp}/gxde-app-upgrader
+mkdir -p "$status_dir"
+update_log="$status_dir/update.log"
+upgrade_log="$status_dir/upgrade.log"
+
+need_root() {
+    [ "$(id -u)" -eq 0 ] || { echo "This operation must run through pkexec." >&2; exit 1; }
+}
+
+valid_package() {
+    [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9+._:-]*$ ]]
+}
+
+case "${1:-}" in
+    update)
+        need_root
+        dnf makecache --refresh 2>&1 | tee "$update_log"
+        exit "${PIPESTATUS[0]}"
+        ;;
+    upgradable-list)
+        dnf repoquery --upgrades --latest-limit 1 --qf '%{name} %{evr}' 2>/dev/null |
+        while read -r package new_version; do
+            valid_package "$package" || continue
+            current_version=$(rpm -q --qf '%{EVR}' "$package" 2>/dev/null) || continue
+            printf '%s %s %s\n' "$package" "$new_version" "$current_version"
+        done
+        ;;
+    upgrade-app)
+        need_root
+        shift
+        packages=()
+        for package in "$@"; do
+            valid_package "$package" || { echo "Invalid package name: $package" >&2; exit 2; }
+            packages+=("$package")
+        done
+        [ "${#packages[@]}" -gt 0 ] || { echo "No package selected." >&2; exit 2; }
+        echo 5
+        echo "# Downloading and installing updates"
+        dnf upgrade -y --refresh "${packages[@]}" 2>&1 | tee "$upgrade_log"
+        result=${PIPESTATUS[0]}
+        [ "$result" -eq 0 ] && echo 100
+        exit "$result"
+        ;;
+    test-install-app)
+        valid_package "${2:-}" || exit 2
+        dnf upgrade --assumeno "$2"
+        ;;
+    clean-log)
+        rm -f "$update_log" "$upgrade_log"
+        ;;
+    *)
+        echo "Usage: $0 update|upgradable-list|upgrade-app|test-install-app|clean-log" >&2
+        exit 2
+        ;;
+esac

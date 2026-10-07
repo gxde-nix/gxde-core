@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+set -u
+
+updates=$(dnf repoquery --upgrades --latest-limit 1 --qf '%{name}' 2>/dev/null | head -n 6)
+[ -n "$updates" ] || exit 0
+count=$(printf '%s\n' "$updates" | wc -l)
+notify-send -i software-update-available "GXDE Software Updates" \
+    "$count or more package updates are available."

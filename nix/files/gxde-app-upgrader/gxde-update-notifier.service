@@ -1,0 +1,7 @@
+[Unit]
+Description=Check for Fedora package updates for GXDE
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/gxde-app-upgrader/gxde-update-notifier.sh
