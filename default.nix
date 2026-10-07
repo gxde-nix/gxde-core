@@ -215,6 +215,12 @@ let
     inherit dtk5core dtk5widget dtk2widget dtk2widget-qt6 dde-qt-dbus-factory qt6NoHook dtk6core dtk6gui dtk6log dtk6widget dframework-dbus-qt6 gsettings-qt6;
   };
 
+  dde-osd = pkgs.callPackage ./nix/dde-osd.nix {
+    inherit dtk2widget-qt6 dframework-dbus-qt6 gsettings-qt6 dtk6core dtk6log;
+  };
+
+  kwin-no-scale = pkgs.callPackage ./nix/kwin-no-scale.nix { };
+
   extra-cmake-modules-kf5 = pkgs.callPackage ./nix/extra-cmake-modules-kf5.nix { };
 
   kwindowsystem-kf5 = pkgs.callPackage ./nix/kwindowsystem-kf5.nix {
@@ -266,6 +272,7 @@ let
     gxde-file-manager
     gxde-file-manager-integration
     gxde-session-ui
+    dde-osd
     gxde-control-center
     gxde-launcher
   ];
@@ -273,6 +280,11 @@ let
   all = pkgs.symlinkJoin {
     name = "gxde-core-${gxde-wallpapers.version}";
     paths = lib.concatMap (p: [ p (lib.getDev p) ]) modules;
+  };
+
+  gxde-session = pkgs.callPackage ./nix/gxde-session.nix {
+    gxde-core = all;
+    inherit gxde-desktop-schemas kwin-no-scale;
   };
 in
 {
@@ -314,8 +326,11 @@ in
     gxde-launcher
     gxde-file-manager
     gxde-session-ui
+    dde-osd
+    kwin-no-scale
     gxde-file-manager-integration
     all
+    gxde-session
     ;
 
   gxde-core = all;

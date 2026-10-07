@@ -4,6 +4,7 @@ GXDE 桌面环境的核心包：主题与素材、应用安装/升级/卸载助�
 ## 版本
 | flake attr | 版本 | 上游 | rev |
 | --- | --- | --- | --- |
+| `dde-osd` | 5.1.6 | GXDE-OS/gxde-session-ui | `76039e86` |
 | `deepin-daemon` | 4.0.16 | GXDE-OS/deepin-daemon | `9b59dbed` |
 | `deepin-gtk-theme` | 26.0.0 | GXDE-OS/deepin-gtk-theme | `2cf8f624` |
 | `deepin-installer-timezones` | 2.7.23 | GXDE-OS/deepin-installer-reborn | `819c934e` |
@@ -41,6 +42,7 @@ GXDE 桌面环境的核心包：主题与素材、应用安装/升级/卸载助�
 | `gxde-wlcom` | 2.3.7-gxde4 | GXDE-OS/gxde-wlcom | `f75991d4` |
 | `kconfig-kf5` | 5.116.0 | GXDE-OS/kconfig | `v5.116.0` |
 | `kcoreaddons-kf5` | 5.116.0 | GXDE-OS/kcoreaddons | `v5.116.0` |
+| `kwin-no-scale` | 5.6.12 | linuxdeepin/dde-kwin | — |
 | `kwindowsystem-kf5` | 5.116.0 | GXDE-OS/kwindowsystem | `v5.116.0` |
 | `open-kylin-wlroots` | 0.17.4-unstable-2026-10-03 | GXDE-OS/open-kylin-wlroots | `950dbeb6` |
 | `startgxde` | 4.0.18 | GXDE-OS/startgxde | `b9589ea6` |
@@ -52,9 +54,22 @@ GXDE 桌面环境的核心包：主题与素材、应用安装/升级/卸载助�
 - `gxde-infras` 里的 Qt6 库把 `out` 输出硬编码进了 `pkg-config`/CMake 文件，而头文件在 `dev` 输出里。因此所有消费者都经过 `default.nix` 里的 `fixQt6Paths`：在输出拆分之后把这些文件改写成 dev 的绝对路径。同类问题还处理了 `dtk6core`（它的 CMake 配置在 dev 里找 `libexec/dtk6/DCore/bin/deepin-os-release`）和 `gxde-dock`（安装出来的 `pluginsiteminterface.h` 少了消费者依赖的 `Q_DECLARE_INTERFACE` 声明）。
 - 有些项目已经跑在 GXDE 的 Fedora 打包之前：`nix/patches/` 下的 Fedora 补丁只在 pin 的 tag 上仍然适用时才用，失效的部分改在 `postPatch`/`preConfigure` 里重现（Qt6 私有目标、`dframeworkdbus` → `dframeworkdbus-qt6`、`lupdate`/`lrelease` 路径、`DESTINATION /usr` 安装路径，以及文件管理器需要的 DBus 接口）。
 - `gxde-file-manager` 需要若干 Nix 侧适配：在使用裸 DTK 头的 CMake 文件里注入 `find_package(Dtk6 ...)`；用 `qdbusxml2cpp` 生成桌面面板需要的 DBus 接口并挂进目标；改写生成的 `cmake_install.cmake` 里的绝对安装路径；补一个上游引用但未随源码发布的 `.desktop` 文件。`gxde-file-manager-integration` 建立在它之上。
-- `gxde-session-ui` 在一次 CMake 里同时编 Qt5 和 Qt6（`dde-shutdown`、`dde-osd` 是 Qt6，父工程锁定 Qt5）。这里的做法是：引入一份去掉 setup hook 的 Qt6 base，用 `CMAKE_PREFIX_PATH`/`QT6_CMAKE_DIR` 传路径，并把 `lupdate`/`lrelease` 指到正确的输出。`gxde-globalmenu-service` 需要 KF5，而当前 nixpkgs 已不再提供，因此本仓库用 KDE 最后一个 KF5 版本（5.116.0）的 `extra-cmake-modules`、`kwindowsystem`、`kconfig`、`kcoreaddons` 与 nixpkgs 的 Qt5 一起编译。
+- `gxde-session-ui` 同时涉及 Qt5 和 Qt6：父工程是 Qt5，`dde-shutdown` 作为 Qt6 `ExternalProject` 编在里面，`dde-osd` 则单独开一个 Qt6 derivation，因为一次 CMake 不能混用两套工具链。上游的安装路径在 patch 阶段就改写成相对路径——如果改成去编辑生成的 `cmake_install.cmake`，CMake 会把路径解析到构建目录而不是输出目录，从而静默丢掉 `dde-lock`、`dde-shutdown`、greeter 和翻译。`gxde-globalmenu-service` 需要 KF5，而当前 nixpkgs 已不再提供，因此本仓库用 KDE 最后一个 KF5 版本（5.116.0）的 `extra-cmake-modules`、`kwindowsystem`、`kconfig`、`kcoreaddons` 与 nixpkgs 的 Qt5 一起编译。
 - `gxde-wallpapers` 用 `gxde-api` 的 `image-blur` 生成壁纸，写死的 `/usr/lib/deepin-api` 路径已重定向到 Nix store。
+- `kwin_no_scale` 不在 `deepin-wm`（那是 libmutter/gala 那条线）里：它由 GXDE 的 KWin fork（`dde-kwin`）生成、由 `gxde-wm-shim` 包安装。`startdde` 只是探测这个路径来决定走不走 KWin 分支，所以本仓提供 `kwin-no-scale`：保留 `$HOME/.config/kglobalshortcutsrc` 的初始化，并在没有 `deepin-kwin_x11` 时拉起 nixpkgs 的 `kdePackages.kwin-x11`。它只加进 FHS 会话环境、不进 `all`（会把 KWin 拖进聚合包）；`gxde-wm-shim` 里 DDE 专属的 `com.deepin.wm` D-Bus 服务和 KWin 脚本仍未打包。
 - 应用三件套（`gxde-app-installer`/`gxde-app-upgrader`/`gxde-app-uninstaller`）是脚本包：Fedora 专属的源码（`*-fedora`、systemd unit、polkit policy）放在 `nix/files/` 下，PATH 用 `makeWrapper` 装配。脚本运行时调用的 `dnf5` 在 nixpkgs 里没有。
+
+## 会话启动
+- GXDE 假定 Fedora/Debian 的 `/usr` 布局：`startgxde` 会 source `/usr/share/startdde/00deepin-dde-env`，`startdde` 读 `/usr/share/startdde/auto_launch.json`，该文件再去启动 `/usr/lib/deepin-daemon/dde-session-daemon`、`/usr/bin/gxde-dock`、`/usr/bin/gxde-desktop-panel`；另外还有一批绝对路径（`dde-lock`、`dde-shutdown`、`kwin_no_scale`、`gnome-keyring-daemon`、`pulseaudio`、`gxde-polkit-agent`）直接编译在 Go 二进制里。本仓的包保留了这套布局（`$out/bin`、`$out/lib`、`$out/share`），因此会话通过 `gxde-session` 启动：它是一个 `buildFHSEnv`，用这些输出重建 `/usr/{bin,sbin,libexec,lib64,share}` 和 `/etc`，然后运行 `startgxde`。
+- 在 TTY 里启动：
+
+```bash
+$ nix build .#gxde-session
+$ ./result/bin/gxde-session
+```
+
+- 用显示管理器时把 `gxde-session` 加进 session packages 即可：它安装的 `share/xsessions/gxde.desktop` 里 `Exec` 指向该包装。直接运行 profile 里的 `startgxde` 只有在环境内才成立——环境外并不存在 `/usr/bin/startdde` 和 `/usr/share/startdde/...`。
+- 只有在环境内启动的进程才能看到这套 `/usr`；之后通过 D-Bus 或 `systemd --user` 激活的服务会退回到宿主路径。环境自带 `/etc/pam.d/system-auth`（deepin 的 pam 文件会 include 它）、含 `com.deepin.dde.startdde` 的已编译 schema，以及会话 UI 二进制（`dde-lock`、`dde-shutdown`、`dde-osd`、greeter）——这些在父 CMake 工程里原本会被装到输出目录之外。GXDE `gxde-wm-shim`（`dde-kwin`）提供的窗口管理器启动器 `kwin_no_scale` 仍未打包。
 
 ## 使用脚本构建
 ### 基本使用

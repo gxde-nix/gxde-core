@@ -83,13 +83,22 @@ stdenv.mkDerivation (finalAttrs: {
     make install DESTDIR=$out PREFIX= GOPATH="${finalAttrs.gopath}"
 
     install -Dm0755 ${./files/startgxde/startgxde-fedora} $out/bin/startgxde
+    install -Dm0644 misc/00deepin-dde-env $out/share/startdde/00deepin-dde-env
+
+    substituteInPlace $out/bin/startgxde \
+      --replace-fail '/usr/bin/startdde' "$out/bin/startdde" \
+      --replace-fail '/usr/share/startdde/00deepin-dde-env' "$out/share/startdde/00deepin-dde-env" \
+      --replace-fail 'dbus-run-session' "${lib.getExe' dbus "dbus-run-session"}" \
+      --replace-fail 'dbus-update-activation-environment' "${lib.getExe' dbus "dbus-update-activation-environment"}"
+
+    substituteInPlace $out/share/startdde/00deepin-dde-env \
+      --replace-fail '/usr/bin/startdde' "$out/bin/startdde"
 
     for f in $out/share/xsessions/*.desktop; do
       [ -e "$f" ] || continue
-      substituteInPlace "$f" --replace-fail '/bin/startdde' '/bin/startgxde'
+      substituteInPlace "$f" --replace-fail '/bin/startdde' "$out/bin/startgxde"
     done
 
-    install -Dm0644 misc/00deepin-dde-env $out/share/startdde/00deepin-dde-env
     rm -rf $out/etc/X11/Xsession.d $out/share/lightdm
 
     runHook postInstall

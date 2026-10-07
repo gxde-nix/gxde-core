@@ -67,8 +67,11 @@ stdenv.mkDerivation (finalAttrs: {
         --replace '/usr/lib64/qt6/bin/lrelease' '${qt6.qttools}/bin/lrelease' \
         --replace '/usr/lib/qt6/bin/lrelease' '${qt6.qttools}/bin/lrelease'
     done
-    find . -name CMakeLists.txt -print0 | xargs -0 sed -i -z -E \
-      's#DESTINATION[[:space:]]+/usr/#DESTINATION #g; s#DESTINATION[[:space:]]+/etc/#DESTINATION etc/#g'
+    find . -name CMakeLists.txt -print0 | xargs -0 sed -i -E \
+      's#DESTINATION[[:space:]]+/usr/#DESTINATION #g;
+       s#DESTINATION[[:space:]]+/etc/#DESTINATION etc/#g;
+       s#DESTINATION[[:space:]]+\$\{PREFIX\}/#DESTINATION #g;
+       s#-DSHUTDOWN_INSTALL_PREFIX:PATH=\$\{PREFIX\}#-DSHUTDOWN_INSTALL_PREFIX:PATH=\$\{CMAKE_INSTALL_PREFIX\}#g'
   '';
   nativeBuildInputs = [ cmake pkg-config qt5.qttools ];
 
@@ -112,10 +115,6 @@ stdenv.mkDerivation (finalAttrs: {
     (lib.cmakeBool "BUILD_TESTING" false)
     (lib.cmakeFeature "QT6_CMAKE_DIR" "${qt6.qtbase}/lib/cmake/Qt6")
   ];
-  preInstall = ''
-    find . -name cmake_install.cmake -print0 | xargs -0 sed -i -E \
-      's#"/usr/#"#g; s#"/etc/#"etc/#g; s#"/var/#"var/#g' || true
-  '';
   meta = {
     description = "GXDE session UI (lock screen, greeter, OSD helpers)";
     homepage = "https://github.com/GXDE-OS/gxde-session-ui";
